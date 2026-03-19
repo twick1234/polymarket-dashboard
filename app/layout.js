@@ -1,0 +1,35 @@
+import './globals.css'
+
+export const metadata = {
+  title: 'Polymarket Claude Bot — Live Dashboard',
+  description: 'Real-time paper trading results powered by Claude AI',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className="min-h-screen bg-gray-950 text-gray-100 font-sans">
+        <nav className="border-b border-gray-800 bg-gray-900/80 backdrop-blur sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🤖</span>
+              <div>
+                <h1 className="font-bold text-white text-sm">Polymarket Claude Bot</h1>
+                <p className="text-xs text-gray-400">AI Prediction Market Trader</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
+                PAPER TRADING
+              </span>
+            </div>
+          </div>
+        </nav>
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          {children}
+        </main>
+      </body>
+    </html>
+  )
+}
