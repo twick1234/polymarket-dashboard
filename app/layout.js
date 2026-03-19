@@ -17,6 +17,12 @@ export default function RootLayout({ children }) {
                 <h1 className="font-bold text-white text-sm">Polymarket Claude Bot</h1>
                 <p className="text-xs text-gray-400">AI Prediction Market Trader</p>
               </div>
+              <div className="flex items-center gap-4">
+                <a href="/" className="text-sm text-gray-300 hover:text-white transition-colors">Live Results</a>
+                <a href="/strategy" className="text-sm text-gray-300 hover:text-white transition-colors">Strategy &amp; Risk</a>
+              </div>
+              <div className="hidden">
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
