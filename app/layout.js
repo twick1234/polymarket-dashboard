@@ -19,7 +19,10 @@ export default function RootLayout({ children }) {
               </div>
               <div className="flex items-center gap-4">
                 <a href="/" className="text-sm text-gray-300 hover:text-white transition-colors">Live Results</a>
-                <a href="/strategy" className="text-sm text-gray-300 hover:text-white transition-colors">Strategy &amp; Risk</a>
+                <a href="/strategy" className="text-sm text-gray-300 hover:text-white transition-colors">Strategy</a>
+                <a href="/architecture" className="text-sm text-gray-300 hover:text-white transition-colors">Architecture</a>
+                <a href="/security" className="text-sm text-gray-300 hover:text-white transition-colors">Security</a>
+                <a href="/tests" className="text-sm text-gray-300 hover:text-white transition-colors">Tests</a>
               </div>
               <div className="hidden">
               </div>

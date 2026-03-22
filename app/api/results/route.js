@@ -1,7 +1,7 @@
 // API route — fetches trade data from the bot's GitHub data export
 // Falls back to demo data if no real data is available yet
 
-export const revalidate = 30  // Revalidate every 30 seconds
+export const revalidate = 60  // Revalidate every 60 seconds
 
 const DEMO_DATA = {
   summary: {
@@ -30,7 +30,7 @@ export async function GET() {
   if (dataUrl) {
     try {
       const res = await fetch(dataUrl, {
-        next: { revalidate: 30 },
+        next: { revalidate: 60 },
         headers: { 'Cache-Control': 'no-cache' },
       })
       if (res.ok) {

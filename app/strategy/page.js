@@ -56,8 +56,8 @@ export default function StrategyPage() {
         <div className="space-y-4">
           {[
             {
-              step: '1', icon: '📡', title: 'Scan (every 30 seconds)',
-              detail: 'Fetches all active Polymarket markets via their public API. Filters out markets with less than $5,000 liquidity, prices near 0% or 100% (already certain), and markets expiring in less than 1 day or more than 90 days. Scores remaining markets by volume, liquidity, and price uncertainty. Takes top 50 candidates.'
+              step: '1', icon: '📡', title: 'Scan (every 5 minutes)',
+              detail: 'Fetches up to 1,000 active Polymarket markets via their public API (2 pages, 500 markets each, with a 1s delay between pages). Filters out markets with less than $5,000 liquidity, prices near 0% or 100% (already certain), and markets expiring in less than 1 day or more than 90 days. Scores remaining markets by volume, liquidity, and price uncertainty. Takes top 15 candidates to send to Claude.'
             },
             {
               step: '2', icon: '🧠', title: 'Analyse with Claude',
@@ -69,7 +69,7 @@ export default function StrategyPage() {
             },
             {
               step: '4', icon: '⚡', title: 'Paper Execute & Monitor',
-              detail: 'Simulates buying YES or NO shares at the real current market price (from live Polymarket order book) with 2% simulated slippage. Monitors every 30 seconds. Closes automatically when: price hits 2.5× entry (take profit), price drops 40% (stop loss), or trade is 72 hours old (max hold time).'
+              detail: 'Simulates buying YES or NO shares at the real current market price (from live Polymarket order book) with 2% simulated slippage. Monitors positions every 5 minutes. Closes automatically when: price hits 2.5× entry (take profit), price drops 40% (stop loss), or trade is 72 hours old (max hold time).'
             },
           ].map(item => (
             <div key={item.step} className="flex gap-4 p-4 bg-gray-800/40 rounded-lg">

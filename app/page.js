@@ -3,7 +3,50 @@
 import { useEffect, useState, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const REFRESH_INTERVAL = 30000  // 30 seconds
+const REFRESH_INTERVAL = 60000   // 60 seconds
+const HEARTBEAT_INTERVAL = 30000 // 30 seconds — separate faster poll for bot status
+
+function BotStatusBadge({ heartbeat }) {
+  if (!heartbeat) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-gray-400">
+        <span className="w-2 h-2 rounded-full bg-gray-500"></span>
+        Checking...
+      </span>
+    )
+  }
+
+  const now = Date.now()
+  const lastSeen = heartbeat.timestamp ? new Date(heartbeat.timestamp).getTime() : 0
+  const ageMs = now - lastSeen
+  const ageSecs = Math.round(ageMs / 1000)
+  const ageStr = ageSecs < 60 ? `${ageSecs}s ago` : `${Math.round(ageSecs / 60)}m ago`
+
+  if (heartbeat.status === 'offline' || ageMs > 120_000) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+        Bot Offline · last seen {ageStr}
+      </span>
+    )
+  }
+
+  if (heartbeat.status === 'paused') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+        <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+        Bot Paused · {ageStr}
+      </span>
+    )
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+      Bot Online · {ageStr}
+    </span>
+  )
+}
 
 function StatCard({ label, value, sub, color = 'text-white' }) {
   return (
@@ -60,6 +103,7 @@ function TradeRow({ trade, index }) {
 
 export default function Dashboard() {
   const [data, setData] = useState(null)
+  const [heartbeat, setHeartbeat] = useState(null)
   const [lastRefresh, setLastRefresh] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -77,15 +121,31 @@ export default function Dashboard() {
     }
   }, [])
 
+  const fetchHeartbeat = useCallback(async () => {
+    try {
+      const res = await fetch('/api/heartbeat', { cache: 'no-store' })
+      const json = await res.json()
+      setHeartbeat(json)
+    } catch (e) {
+      // ignore — heartbeat failures don't break the page
+    }
+  }, [])
+
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, REFRESH_INTERVAL)
-    return () => clearInterval(interval)
-  }, [fetchData])
+    fetchHeartbeat()
+    const dataInterval = setInterval(fetchData, REFRESH_INTERVAL)
+    const hbInterval = setInterval(fetchHeartbeat, HEARTBEAT_INTERVAL)
+    return () => {
+      clearInterval(dataInterval)
+      clearInterval(hbInterval)
+    }
+  }, [fetchData, fetchHeartbeat])
 
   const s = data?.summary
   const trades = data?.trades || []
   const pnlHistory = data?.pnl_history || []
+  const logs = data?.logs || []
   const isWaiting = data?.status === 'waiting' || !s || s.total_trades === 0
 
   const pnlColor = s?.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'
@@ -98,30 +158,63 @@ export default function Dashboard() {
         <div>
           <h2 className="text-2xl font-bold text-white">Live Paper Trading</h2>
           <p className="text-gray-400 mt-1">
-            Claude AI scanning Polymarket every 30s for mispriced markets
+            Claude AI scanning Polymarket every 5 min for mispriced markets
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right flex flex-col items-end gap-2">
+          {/* Bot heartbeat badge */}
+          <BotStatusBadge heartbeat={heartbeat} />
           <button
-            onClick={fetchData}
+            onClick={() => { fetchData(); fetchHeartbeat() }}
             className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1.5"
           >
             <span className={`w-1.5 h-1.5 rounded-full ${isRefreshing ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></span>
-            {lastRefresh ? `Updated ${lastRefresh.toLocaleTimeString()}` : 'Loading...'}
+            {lastRefresh ? `Data: ${lastRefresh.toLocaleTimeString()}` : 'Loading...'}
           </button>
-          <p className="text-xs text-gray-600 mt-1">Auto-refreshes every 30s</p>
+          <p className="text-xs text-gray-600">Refreshes every 60s</p>
         </div>
       </div>
 
+      {/* Offline warning */}
+      {heartbeat && heartbeat.status === 'offline' && (
+        <div className="border border-red-500/20 bg-red-500/5 rounded-xl p-4 flex items-center gap-3">
+          <span className="text-2xl">🔴</span>
+          <div>
+            <p className="text-red-400 font-semibold text-sm">Bot is offline</p>
+            <p className="text-gray-400 text-xs mt-0.5">
+              Start it with: <code className="bg-gray-800 px-2 py-0.5 rounded text-green-400">python -m src.main run --mode paper --capital 1000</code>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Paused warning */}
+      {heartbeat && heartbeat.status === 'paused' && (
+        <div className="border border-yellow-500/20 bg-yellow-500/5 rounded-xl p-4 flex items-center gap-3">
+          <span className="text-2xl">⏸</span>
+          <div>
+            <p className="text-yellow-400 font-semibold text-sm">Bot is paused</p>
+            <p className="text-gray-400 text-xs mt-0.5">Send /resume to the Telegram bot to resume trading</p>
+          </div>
+        </div>
+      )}
+
       {/* Waiting state */}
-      {isWaiting && (
+      {isWaiting && heartbeat?.status === 'running' && (
+        <div className="border border-yellow-500/20 bg-yellow-500/5 rounded-xl p-6 text-center">
+          <p className="text-4xl mb-3">⏳</p>
+          <h3 className="text-yellow-400 font-semibold">Bot is running — waiting for first trade</h3>
+          <p className="text-gray-500 text-xs mt-2">This dashboard auto-updates as trades come in</p>
+        </div>
+      )}
+
+      {isWaiting && !heartbeat?.status && (
         <div className="border border-yellow-500/20 bg-yellow-500/5 rounded-xl p-6 text-center">
           <p className="text-4xl mb-3">⏳</p>
           <h3 className="text-yellow-400 font-semibold">Waiting for first trades</h3>
           <p className="text-gray-400 text-sm mt-2">
-            Start the bot with: <code className="bg-gray-800 px-2 py-0.5 rounded text-green-400">python -m src.main --mode paper --capital 1000</code>
+            Start the bot: <code className="bg-gray-800 px-2 py-0.5 rounded text-green-400">python -m src.main run --mode paper --capital 1000</code>
           </p>
-          <p className="text-gray-500 text-xs mt-2">This dashboard auto-updates as trades come in</p>
         </div>
       )}
 
@@ -146,11 +239,22 @@ export default function Dashboard() {
         />
         <StatCard
           label="Open Positions"
-          value={s?.open_positions || 0}
+          value={s?.open_positions || heartbeat?.open_positions || 0}
           sub={`Avg edge: ${((s?.avg_edge || 0) * 100).toFixed(1)}%`}
           color="text-yellow-400"
         />
       </div>
+
+      {/* Bot config strip (when online) */}
+      {heartbeat && heartbeat.status !== 'offline' && heartbeat.timestamp && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-3 flex flex-wrap gap-4 text-xs text-gray-400">
+          <span>Mode: <span className="text-white">{heartbeat.mode?.toUpperCase() || 'PAPER'}</span></span>
+          <span>Min Edge: <span className="text-white">{heartbeat.min_edge ? `${(heartbeat.min_edge * 100).toFixed(0)}%` : '—'}</span></span>
+          <span>Scan: <span className="text-white">every {heartbeat.scan_interval_secs || 300}s</span></span>
+          <span>Uptime: <span className="text-white">{heartbeat.uptime_secs ? `${Math.round(heartbeat.uptime_secs / 3600)}h ${Math.round((heartbeat.uptime_secs % 3600) / 60)}m` : '—'}</span></span>
+          <span className="ml-auto text-gray-600 italic">Control via Telegram /config · /set · /pause</span>
+        </div>
+      )}
 
       {/* P&L Chart */}
       {pnlHistory.length > 1 && (
@@ -178,14 +282,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Architecture section */}
+      {/* How It Works */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h3 className="text-sm font-semibold text-gray-300 mb-4">How It Works</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
-            { step: '1', icon: '📡', title: 'Scan', desc: 'Fetches all active Polymarket markets every 30s, filtering for liquidity & time-to-expiry' },
-            { step: '2', icon: '🧠', title: 'Analyse', desc: 'Claude reads each market question and estimates the TRUE probability based on current knowledge' },
-            { step: '3', icon: '📊', title: 'Edge', desc: 'Compares Claude\'s estimate vs market price. Trades when edge > 8% with >60% confidence' },
+            { step: '1', icon: '📡', title: 'Scan', desc: 'Fetches all active Polymarket markets every 5 min, filtering for liquidity & time-to-expiry' },
+            { step: '2', icon: '🧠', title: 'Analyse', desc: "Claude reads each market question and estimates the TRUE probability based on current knowledge" },
+            { step: '3', icon: '📊', title: 'Edge', desc: "Compares Claude's estimate vs market price. Trades when edge > 8% with >60% confidence" },
             { step: '4', icon: '⚡', title: 'Execute', desc: 'Paper trades YES or NO shares using Kelly Criterion sizing. Max 5% of capital per trade' },
           ].map(item => (
             <div key={item.step} className="flex flex-col gap-2 p-4 bg-gray-800/50 rounded-lg">
@@ -203,14 +307,12 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-gray-300">
             Trade History {trades.length > 0 && <span className="text-gray-500">({trades.length})</span>}
           </h3>
-          {trades.length > 0 && (
-            <span className="text-xs text-gray-500">Most recent first</span>
-          )}
+          {trades.length > 0 && <span className="text-xs text-gray-500">Most recent first</span>}
         </div>
         {trades.length === 0 ? (
           <div className="py-12 text-center text-gray-600">
             <p className="text-3xl mb-2">📋</p>
-            <p className="text-sm">No trades yet — start the bot to begin paper trading</p>
+            <p className="text-sm">No trades yet</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -235,6 +337,21 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Live Logs */}
+      {logs.length > 0 && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-300">Bot Activity Log</h3>
+            <span className="text-xs text-gray-500">Last 60 lines · updates every 60s</span>
+          </div>
+          <div className="p-4 overflow-x-auto max-h-64 overflow-y-auto bg-black/40">
+            <pre className="text-xs text-green-400 font-mono leading-relaxed whitespace-pre-wrap">
+              {logs.join('\n')}
+            </pre>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="text-center text-xs text-gray-600 pb-4">
