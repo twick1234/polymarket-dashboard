@@ -1,7 +1,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Polymarket Claude Bot — Live Dashboard',
+  title: 'Chu Trading Desk — Live Dashboard',
   description: 'Real-time paper trading results powered by Claude AI',
 }
 
@@ -14,8 +14,8 @@ export default function RootLayout({ children }) {
             <div className="flex items-center gap-3">
               <span className="text-2xl">🤖</span>
               <div>
-                <h1 className="font-bold text-white text-sm">Polymarket Claude Bot</h1>
-                <p className="text-xs text-gray-400">AI Prediction Market Trader</p>
+                <h1 className="font-bold text-white text-sm">Chu Trading Desk</h1>
+                <p className="text-xs text-gray-400">Multi-Agent Trading System</p>
               </div>
               <div className="flex items-center gap-4">
                 <a href="/" className="text-sm text-gray-300 hover:text-white transition-colors">Live Results</a>
