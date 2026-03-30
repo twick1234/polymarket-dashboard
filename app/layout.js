@@ -23,6 +23,7 @@ export default function RootLayout({ children }) {
                 <a href="/architecture" className="text-sm text-gray-300 hover:text-white transition-colors">Architecture</a>
                 <a href="/security" className="text-sm text-gray-300 hover:text-white transition-colors">Security</a>
                 <a href="/tests" className="text-sm text-gray-300 hover:text-white transition-colors">Tests</a>
+                <a href="/agents" className="text-sm text-gray-300 hover:text-white transition-colors">Agents</a>
               </div>
               <div className="hidden">
               </div>
